@@ -1,5 +1,5 @@
 """
-Emerald HTTP Server 2.1
+Emerald HTTP Server 2.2
 """
 
 import socket
