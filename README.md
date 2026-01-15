@@ -7,3 +7,6 @@ Emerald is a lightweight and simple HTTP Server.
 
 ### 2.0:
 - Added more HTTP support
+
+### 2.1:
+- Added templates

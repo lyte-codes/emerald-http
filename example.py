@@ -1,4 +1,5 @@
-import emerald, sys
+import sys, time, datetime
+import emerald
 
 try:
     server = emerald.HTTPServer(sys.argv[1], int(sys.argv[2]))
@@ -8,14 +9,22 @@ except:
 
 @server.route("GET", "/api")
 def api():
-    import time
     return f"{time.time()}\n"
 
 @server.route("GET", "/")
-def about():
-    return f"""
-        <h1>Emerald 2.0 Test</h1>
-        <p>This time API is a test of Emerald HTTP Server v2.0. Go to /api to get the time.</p>
-    """
+def human():
+    today = datetime.date.today()
+    now = datetime.datetime.now()
+    
+    return emerald.Template("./template.html").fill(
+        day    = str(today.strftime("%A")),
+        daynum = str(today.day),
+        month  = str(now.strftime("%B")),
+        year   = str(today.year),
+        hour   = str(now.strftime("%I")),
+        minute = str(now.minute).ljust(2, "0"),
+        second = str(now.second).ljust(2, "0"),
+        ampm   = str(now.strftime("%p"))
+    )
 
 server.run()
