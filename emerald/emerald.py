@@ -4,13 +4,77 @@ Emerald HTTP Server 2.1
 
 import socket
 from concurrent.futures import ThreadPoolExecutor
+import os
+import html
+import traceback
 
+class ErrorPages:
+    def __init__(
+        self,
+        directory: str = "errors",
+        dev_mode: bool = False
+    ):
+        self.directory = directory
+        self.dev_mode = dev_mode
+
+    def _load(self, code: int):
+        path = os.path.join(self.directory, f"{code}.html")
+        if not os.path.isfile(path):
+            return None
+
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+
+    def render(
+        self,
+        code: int,
+        *,
+        path: str = "",
+        method: str = "",
+        error: Exception | None = None
+    ) -> tuple[str, str]:
+        """
+        Returns (body, content_type)
+        """
+
+        template = self._load(code)
+
+        # ---------- Plain text fallback ----------
+        if template is None:
+            body = f"{code} Error\n"
+            if self.dev_mode and error:
+                body += str(error) + "\n"
+            return body, "text/plain"
+
+        # ---------- Template variables ----------
+        vars = {
+            "code": code,
+            "path": html.escape(path),
+            "method": method,
+        }
+
+        if self.dev_mode and error:
+            vars["error"] = html.escape(str(error))
+            vars["traceback"] = html.escape(
+                "".join(traceback.format_exception(error))
+            )
+        else:
+            vars["error"] = ""
+            vars["traceback"] = ""
+
+        try:
+            return template.format(**vars), "text/html"
+        except Exception:
+            # Template formatting failure
+            return f"{code} Error\n", "text/plain"
+        
 class HTTPServer:
-    def __init__(self, host: str, port: int, workers: int = 64):
+    def __init__(self, host: str, port: int, workers: int = 64, errors: ErrorPages = ErrorPages()):
         self.host = host
         self.port = port
         self.workers = workers
         self.router = Router()
+        self.errors = errors
 
     def route(self, method: str, path: str):
         def decorator(fn):
@@ -34,7 +98,7 @@ class HTTPServer:
             handler, params = self.router.match(method, path)
 
             if handler is None:
-                body = b"404 Not Found\n"
+                body = self.errors.render(404)[0].encode("utf-8")
                 response = (
                     "HTTP/1.1 404 Not Found\r\n"
                     f"Content-Length: {len(body)}\r\n"

@@ -1,1 +1,1 @@
-from .emerald import HTTPServer, Template
+from .emerald import HTTPServer, Template, ErrorPages
